@@ -54,6 +54,27 @@ export interface ShareInfo {
 }
 
 /**
+ * Tipos de cuenta
+ */
+
+export type AccountStatus = 'active' | 'trial' | 'expired' | 'suspended';
+
+export interface Account {
+  uid: string;
+  email: string;
+  status: AccountStatus;
+  planId: string;
+  limits: {
+    storageBytes: number;
+  };
+  enabledApps: Record<string, boolean>;
+  paidUntil: string | null;
+  trialEndsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
  * Tipos de parámetros para métodos del SDK
  */
 

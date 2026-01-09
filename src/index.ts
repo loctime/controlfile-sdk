@@ -13,6 +13,8 @@ export type {
   FileItem,
   Share,
   ShareInfo,
+  Account,
+  AccountStatus,
   
   // Tipos de parámetros
   ListFilesParams,

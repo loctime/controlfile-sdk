@@ -5,6 +5,7 @@
 import { HttpClient } from './utils/http';
 import { FilesModule } from './modules/files';
 import { SharesModule } from './modules/shares';
+import { AccountsModule } from './modules/accounts';
 import type {
   ControlFileClientConfig,
   ControlFileClientOptions,
@@ -14,6 +15,7 @@ export class ControlFileClient {
   private http: HttpClient;
   public readonly files: FilesModule;
   public readonly shares: SharesModule;
+  public readonly accounts: AccountsModule;
 
   constructor(config: ControlFileClientConfig) {
     // Configurar opciones por defecto
@@ -33,5 +35,6 @@ export class ControlFileClient {
     // Crear módulos
     this.files = new FilesModule(this.http);
     this.shares = new SharesModule(this.http, config.baseUrl);
+    this.accounts = new AccountsModule(this.http);
   }
 }

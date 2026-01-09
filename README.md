@@ -1,6 +1,6 @@
 # @controlfile/sdk
 
-SDK oficial de ControlFile para integración con aplicaciones cliente (ControlAudit, ControlDoc, etc.).
+SDK oficial de ControlFile para integración con aplicaciones cliente.
 
 ## Instalación
 
@@ -9,6 +9,10 @@ npm install @controlfile/sdk
 ```
 
 ## Configuración Inicial
+
+El SDK requiere una función `getAuthToken()` que retorne un token válido aceptado por ControlFile. El token debe incluirse en el header `Authorization: Bearer <token>` en cada solicitud.
+
+### Ejemplo con Firebase (ejemplo de uso)
 
 ```typescript
 import { ControlFileClient } from '@controlfile/sdk';
@@ -21,11 +25,48 @@ const client = new ControlFileClient({
   getAuthToken: async () => {
     const user = auth.currentUser;
     if (!user) throw new Error('Usuario no autenticado');
-    return user.getIdToken();
+    return user.getIdToken(); // Firebase ID Token
   },
   options: {
     timeout: 30000, // 30 segundos (opcional)
     retries: 3,     // Reintentos automáticos (opcional)
+  }
+});
+```
+
+**Nota**: Firebase es solo un ejemplo. Puedes usar cualquier sistema de autenticación que genere tokens válidos para ControlFile.
+
+### Ejemplo genérico (token propio / backend)
+
+```typescript
+import { ControlFileClient } from '@controlfile/sdk';
+
+// Opción 1: Token desde localStorage/sessionStorage
+const client = new ControlFileClient({
+  baseUrl: process.env.NEXT_PUBLIC_CONTROLFILE_BACKEND_URL!,
+  getAuthToken: async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) throw new Error('Token no disponible');
+    return token;
+  }
+});
+
+// Opción 2: Token desde tu backend API
+const client = new ControlFileClient({
+  baseUrl: process.env.NEXT_PUBLIC_CONTROLFILE_BACKEND_URL!,
+  getAuthToken: async () => {
+    const response = await fetch('/api/auth/token');
+    const { token } = await response.json();
+    return token;
+  }
+});
+
+// Opción 3: Token desde cualquier proveedor de autenticación
+const client = new ControlFileClient({
+  baseUrl: process.env.NEXT_PUBLIC_CONTROLFILE_BACKEND_URL!,
+  getAuthToken: async () => {
+    // Integra con tu sistema de autenticación preferido
+    return await yourAuthProvider.getToken();
   }
 });
 ```
@@ -186,6 +227,46 @@ const shareUrl = client.shares.buildShareUrl('share_token_abc123');
 const imageUrl = client.shares.buildImageUrl('share_token_abc123');
 ```
 
+### Accounts (Cuentas)
+
+#### Bootstrap de cuenta
+
+El método `ensure()` asegura que exista la cuenta global del usuario autenticado. Si no existe, el backend la crea automáticamente con plan FREE. Este método debe llamarse en el primer login de cualquier app.
+
+```typescript
+// Asegurar que existe la cuenta (crear si no existe)
+const account = await client.accounts.ensure();
+
+console.log(account.uid);
+console.log(account.email);
+console.log(account.status); // 'active' | 'trial' | 'expired' | 'suspended'
+console.log(account.planId); // ID del plan actual
+console.log(account.limits.storageBytes); // Límite de almacenamiento
+console.log(account.enabledApps); // Record<string, boolean>
+```
+
+**Cuándo usar `ensure()`:**
+- En el primer login de cualquier app (una vez por usuario)
+- Para inicializar la cuenta global del usuario
+- El backend decide automáticamente si crear la cuenta o devolver la existente
+
+#### Obtener cuenta actual
+
+El método `get()` devuelve el estado global de la cuenta sin modificar nada. Úsalo para leer el estado actual de la cuenta.
+
+```typescript
+// Obtener estado de la cuenta (solo lectura)
+const account = await client.accounts.get();
+
+console.log(account.status);
+console.log(account.planId);
+console.log(account.limits);
+console.log(account.paidUntil); // null si no hay pago
+console.log(account.trialEndsAt); // null si no hay trial
+```
+
+**Nota importante:** El SDK **NO** decide billing, planes ni permisos. ControlFile es la autoridad global de cuentas, billing y estado. Las apps solo consumen este estado mediante el SDK.
+
 ## Manejo de Errores
 
 El SDK normaliza todos los errores HTTP en clases tipadas:
@@ -246,6 +327,8 @@ import type {
   FileItem,
   Share,
   ShareInfo,
+  Account,
+  AccountStatus,
   ListFilesParams,
   ListFilesResponse,
   UploadParams,
@@ -309,9 +392,19 @@ async function createShare(fileId: string) {
 }
 ```
 
+## Modelo de Confianza
+
+Es importante entender el modelo de confianza y responsabilidades del SDK:
+
+- **Validación en el Backend**: El backend de ControlFile valida el token en cada solicitud, verificando su validez, expiración y firma.
+- **Sin Validación de Identidad en el SDK**: El SDK no valida identidad, no verifica si el token pertenece a un usuario válido ni autentica usuarios.
+- **Sin Conocimiento de Permisos**: El SDK no conoce ni valida permisos, roles, tenants o planes. Estas validaciones ocurren exclusivamente en el backend.
+- **Cliente HTTP Tipado**: El SDK actúa como un cliente HTTP tipado que envía solicitudes autenticadas al backend. La autorización y el control de acceso son responsabilidad del backend.
+- **Token Opaque**: El SDK trata el token como una cadena opaca que debe incluirse en cada solicitud. No inspecciona ni modifica el token.
+
 ## Notas Importantes
 
-1. **Autenticación**: El SDK no maneja la autenticación directamente. Debes proporcionar una función `getAuthToken()` que retorne el Firebase ID token.
+1. **Autenticación**: El SDK no maneja la autenticación directamente. Debes proporcionar una función `getAuthToken()` que retorne un token válido aceptado por ControlFile (por ejemplo, un Firebase ID Token, un JWT de tu backend, etc.).
 
 2. **URLs Internas**: El SDK nunca expone URLs internas o endpoints. Todas las operaciones se realizan a través de métodos tipados.
 
