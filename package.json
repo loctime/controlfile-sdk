@@ -1,6 +1,6 @@
 {
   "name": "@controlfile/sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "./dist/node/index.js",
   "module": "./dist/browser/index.js",
@@ -22,7 +22,9 @@
       "default": "./dist/browser/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0"
