@@ -116,21 +116,19 @@ export class FilesModule {
       params.onProgress(10);
     }
 
-    // Paso 2: Upload al storage (B2)
-    const uploadUrl = presignResponse.presignedUrl;
-    const formData = new FormData();
-
-    // Si hay campos adicionales del presign (para multipart upload)
-    if (presignResponse.fields) {
-      Object.entries(presignResponse.fields).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-    }
-
-    formData.append('file', fileBlob);
+    // Paso 2: Upload al storage usando uploadUrl, method y headers del backend
+    const uploadUrl = presignResponse.uploadUrl;
+    const method = presignResponse.method || 'PUT';
+    const headers = presignResponse.headers || {};
 
     // Upload con tracking de progreso
-    await this.uploadToStorage(uploadUrl, formData, params.onProgress);
+    await this.uploadToStorage(
+      uploadUrl,
+      fileBlob,
+      method,
+      headers,
+      params.onProgress
+    );
 
     if (params.onProgress) {
       params.onProgress(90);
@@ -168,11 +166,13 @@ export class FilesModule {
   }
 
   /**
-   * Sube el archivo al storage (B2) con tracking de progreso
+   * Sube el archivo al storage usando uploadUrl, method y headers del backend
    */
   private async uploadToStorage(
     url: string,
-    formData: FormData,
+    fileBlob: globalThis.File | Blob,
+    method: string = 'PUT',
+    headers: Record<string, string> = {},
     onProgress?: (progress: number) => void
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -202,8 +202,15 @@ export class FilesModule {
         reject(new Error('Upload was aborted'));
       });
 
-      xhr.open('POST', url);
-      xhr.send(formData);
+      xhr.open(method, url);
+
+      // Aplicar headers del backend
+      Object.entries(headers).forEach(([key, value]) => {
+        xhr.setRequestHeader(key, value);
+      });
+
+      // Enviar el archivo directamente como Blob/File
+      xhr.send(fileBlob);
     });
   }
 

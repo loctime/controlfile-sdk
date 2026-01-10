@@ -19,7 +19,7 @@ export declare class FilesModule {
      */
     upload(params: UploadParams): Promise<UploadResponse>;
     /**
-     * Sube el archivo al storage (B2) con tracking de progreso
+     * Sube el archivo al storage usando uploadUrl, method y headers del backend
      */
     private uploadToStorage;
     /**

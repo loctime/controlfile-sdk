@@ -157,7 +157,9 @@ export interface ControlFileClientConfig {
 export interface PresignUploadResponse {
   success: boolean;
   uploadSessionId: string;
-  presignedUrl: string;
+  uploadUrl: string;
+  method?: string;
+  headers?: Record<string, string>;
   fields?: Record<string, string>;
   fileKey: string;
 }

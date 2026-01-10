@@ -32,7 +32,8 @@
     "build:browser": "tsc -p tsconfig.browser.json",
     "build:node": "tsc -p tsconfig.node.json",
     "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\" || true",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "sdk-go": "npm run build && git add -A && (git commit -m \"chore: build before release\" || git diff --quiet) && npm version patch && git push --follow-tags"
   },
   "repository": "https://github.com/loctime/controlfile-sdk"
 }
