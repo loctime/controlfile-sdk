@@ -2,6 +2,26 @@
  * Asegura que una ruta de carpetas exista, creándola si es necesario
  * Función idempotente: si la ruta ya existe, la reutiliza
  */
+/**
+ * Normaliza una respuesta de carpeta del backend para usar siempre 'id'
+ * Acepta tanto { id } como { folderId } para mantener compatibilidad
+ */
+function normalizeFolderResponse(response) {
+    const folderId = response.id ?? response.folderId;
+    if (!folderId) {
+        throw new Error('Invalid /api/folders response: missing id');
+    }
+    return {
+        ...response,
+        id: folderId,
+    };
+}
+/**
+ * Normaliza un array de carpetas del backend
+ */
+function normalizeFolderArray(items) {
+    return items.map(normalizeFolderResponse);
+}
 export async function ensurePath(http, params) {
     const { path, userId } = params;
     if (path.length === 0) {
@@ -40,7 +60,8 @@ async function findFolderByName(http, name, parentId, userId) {
         qs.set('parentId', parentId);
     }
     const response = await http.call(`/api/folders?${qs.toString()}`);
-    const items = response.items || response.data || [];
+    const rawItems = response.items || response.data || [];
+    const items = normalizeFolderArray(rawItems);
     const folder = items.find((item) => item.type === 'folder' &&
         item.name === name &&
         item.userId === userId &&
@@ -63,5 +84,5 @@ async function createFolder(http, name, parentId, userId) {
             userId,
         }),
     });
-    return response;
+    return normalizeFolderResponse(response);
 }

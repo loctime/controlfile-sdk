@@ -6,6 +6,30 @@
 import { HttpClient } from '../../utils/http';
 import type { EnsurePathParams, Folder } from '../../types';
 
+/**
+ * Normaliza una respuesta de carpeta del backend para usar siempre 'id'
+ * Acepta tanto { id } como { folderId } para mantener compatibilidad
+ */
+function normalizeFolderResponse(response: any): Folder {
+  const folderId = response.id ?? response.folderId;
+  
+  if (!folderId) {
+    throw new Error('Invalid /api/folders response: missing id');
+  }
+
+  return {
+    ...response,
+    id: folderId,
+  } as Folder;
+}
+
+/**
+ * Normaliza un array de carpetas del backend
+ */
+function normalizeFolderArray(items: any[]): Folder[] {
+  return items.map(normalizeFolderResponse);
+}
+
 export async function ensurePath(
   http: HttpClient,
   params: EnsurePathParams
@@ -65,11 +89,13 @@ async function findFolderByName(
   }
 
   const response = await http.call<{
-    items?: Folder[];
-    data?: Folder[];
+    items?: any[];
+    data?: any[];
   }>(`/api/folders?${qs.toString()}`);
 
-  const items = response.items || response.data || [];
+  const rawItems = response.items || response.data || [];
+  const items = normalizeFolderArray(rawItems);
+  
   const folder = items.find(
     (item) =>
       item.type === 'folder' &&
@@ -94,7 +120,7 @@ async function createFolder(
   parentId: string | null,
   userId: string
 ): Promise<Folder> {
-  const response = await http.call<Folder>('/api/folders', {
+  const response = await http.call<any>('/api/folders', {
     method: 'POST',
     body: JSON.stringify({
       name,
@@ -103,5 +129,5 @@ async function createFolder(
     }),
   });
 
-  return response;
+  return normalizeFolderResponse(response);
 }
