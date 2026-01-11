@@ -2,6 +2,7 @@
  * Módulo de archivos
  */
 import { validateFileId, validateFileName, validatePageSize, validateFile, } from '../utils/validation';
+import { ensurePath } from './folders/ensurePath';
 export class FilesModule {
     constructor(http) {
         this.http = http;
@@ -180,5 +181,28 @@ export class FilesModule {
             size: response.size,
             mime: response.mime,
         };
+    }
+    /**
+     * Sube un archivo asegurando primero que la ruta de carpetas exista
+     */
+    async uploadFile(params) {
+        const { file, path, userId, onProgress } = params;
+        if (!file || !(file instanceof File || file instanceof Blob)) {
+            throw new Error('El parámetro file debe ser un File o Blob válido');
+        }
+        const fileName = file instanceof File ? file.name : 'archivo';
+        if (!fileName || fileName.trim() === '') {
+            throw new Error('El archivo debe tener un nombre válido');
+        }
+        const folderId = await ensurePath(this.http, { path, userId });
+        if (!folderId) {
+            throw new Error('No se pudo obtener el folderId de la ruta');
+        }
+        return this.upload({
+            file,
+            name: fileName,
+            parentId: folderId,
+            onProgress,
+        });
     }
 }

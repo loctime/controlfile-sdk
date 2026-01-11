@@ -19,12 +19,15 @@ export type {
   // Tipos de parámetros
   ListFilesParams,
   UploadParams,
+  EnsurePathParams,
+  UploadFileParams,
   CreateShareParams,
   
   // Tipos de respuesta
   ListFilesResponse,
   GetDownloadUrlResponse,
   UploadResponse,
+  FileResponse,
   ReplaceFileResponse,
   CreateShareResponse,
   ShareDownloadResponse,

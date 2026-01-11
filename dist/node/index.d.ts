@@ -2,5 +2,5 @@
  * Export principal del SDK @controlfile/sdk
  */
 export { ControlFileClient } from './client';
-export type { File, Folder, FileItem, Share, ShareInfo, Account, AccountStatus, ListFilesParams, UploadParams, CreateShareParams, ListFilesResponse, GetDownloadUrlResponse, UploadResponse, ReplaceFileResponse, CreateShareResponse, ShareDownloadResponse, ControlFileClientConfig, ControlFileClientOptions, } from './types';
+export type { File, Folder, FileItem, Share, ShareInfo, Account, AccountStatus, ListFilesParams, UploadParams, EnsurePathParams, UploadFileParams, CreateShareParams, ListFilesResponse, GetDownloadUrlResponse, UploadResponse, FileResponse, ReplaceFileResponse, CreateShareResponse, ShareDownloadResponse, ControlFileClientConfig, ControlFileClientOptions, } from './types';
 export { ControlFileError, AuthenticationError, NotFoundError, ForbiddenError, QuotaExceededError, ValidationError, NetworkError, ServerError, } from './errors';

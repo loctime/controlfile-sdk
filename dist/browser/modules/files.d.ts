@@ -2,7 +2,7 @@
  * Módulo de archivos
  */
 import { HttpClient } from '../utils/http';
-import type { ListFilesParams, ListFilesResponse, GetDownloadUrlResponse, UploadParams, UploadResponse, ReplaceFileResponse } from '../types';
+import type { ListFilesParams, ListFilesResponse, GetDownloadUrlResponse, UploadParams, UploadResponse, UploadFileParams, FileResponse, ReplaceFileResponse } from '../types';
 export declare class FilesModule {
     private http;
     constructor(http: HttpClient);
@@ -34,4 +34,8 @@ export declare class FilesModule {
      * Reemplaza el contenido de un archivo existente
      */
     replace(fileId: string, file: globalThis.File | Blob): Promise<ReplaceFileResponse>;
+    /**
+     * Sube un archivo asegurando primero que la ruta de carpetas exista
+     */
+    uploadFile(params: UploadFileParams): Promise<FileResponse>;
 }

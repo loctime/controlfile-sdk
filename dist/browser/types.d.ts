@@ -15,6 +15,17 @@ export interface File {
     updatedAt: Date | string;
     deletedAt?: Date | string | null;
 }
+/**
+ * Carpeta en el sistema de archivos
+ *
+ * Nota: Las carpetas y archivos comparten la misma colección (files) diferenciados por el campo 'type'.
+ * Esto permite:
+ * - Árbol unificado de archivos y carpetas
+ * - UI tipo Explorer
+ * - Permisos por nodo
+ *
+ * El backend debe tener un índice único (userId, parentId, name) para garantizar idempotencia.
+ */
 export interface Folder {
     id: string;
     userId: string;
@@ -28,6 +39,10 @@ export interface Folder {
     updatedAt: Date | string;
     deletedAt?: Date | string | null;
 }
+/**
+ * Unión de archivo o carpeta
+ * Permite trabajar con ambos tipos de forma unificada en el árbol de archivos
+ */
 export type FileItem = File | Folder;
 export interface Share {
     token: string;
@@ -115,6 +130,17 @@ export interface ShareDownloadResponse {
     fileName: string;
     fileSize: number;
 }
+export interface EnsurePathParams {
+    path: string[];
+    userId: string;
+}
+export interface UploadFileParams {
+    file: globalThis.File | Blob;
+    path: string[];
+    userId: string;
+    onProgress?: (progress: number) => void;
+}
+export type FileResponse = UploadResponse;
 /**
  * Configuración del cliente
  */

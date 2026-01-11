@@ -5,6 +5,7 @@ import { HttpClient } from './utils/http';
 import { FilesModule } from './modules/files';
 import { SharesModule } from './modules/shares';
 import { AccountsModule } from './modules/accounts';
+import { FoldersModule } from './modules/folders';
 export class ControlFileClient {
     constructor(config) {
         // Configurar opciones por defecto
@@ -23,5 +24,6 @@ export class ControlFileClient {
         this.files = new FilesModule(this.http);
         this.shares = new SharesModule(this.http, config.baseUrl);
         this.accounts = new AccountsModule(this.http);
+        this.folders = new FoldersModule(this.http);
     }
 }

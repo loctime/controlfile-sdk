@@ -133,6 +133,30 @@ const result = await client.files.upload({
 console.log(`Archivo subido: ${result.fileId}`);
 ```
 
+#### Subir archivo con ruta automática
+
+El método `uploadFile` asegura automáticamente que la ruta de carpetas exista antes de subir el archivo. Es idempotente: si la ruta ya existe, la reutiliza.
+
+```typescript
+const fileInput = document.querySelector('input[type="file"]');
+const file = fileInput.files[0];
+
+// La ruta ['app1', 'documentos', '2024'] se crea automáticamente si no existe
+const result = await client.files.uploadFile({
+  file,
+  path: ['app1', 'documentos', '2024'],
+  userId: 'user_123',
+  onProgress: (progress) => {
+    console.log(`Progreso: ${progress}%`);
+  }
+});
+
+console.log(`Archivo subido: ${result.fileId}`);
+console.log(`Carpeta destino: ${result.fileName}`);
+```
+
+**Nota importante:** `uploadFile` siempre requiere un `path` válido. No permite subir archivos con `parentId = null`. Si necesitas subir a la raíz, usa `upload` directamente con `parentId: null`.
+
 #### Eliminar archivo
 
 ```typescript
@@ -153,6 +177,53 @@ const newFile = document.querySelector('input[type="file"]').files[0];
 const result = await client.files.replace('file_abc123', newFile);
 console.log(`Archivo reemplazado. Nuevo tamaño: ${result.size} bytes`);
 ```
+
+### Carpetas
+
+#### Asegurar ruta de carpetas (ensurePath)
+
+El método `ensurePath` crea una ruta de carpetas completa de forma idempotente. Si la ruta ya existe, la reutiliza. Si no existe, crea todas las carpetas necesarias secuencialmente.
+
+```typescript
+// Crear ruta completa: app1/documentos/2024/enero
+const folderId = await client.folders.ensurePath({
+  path: ['app1', 'documentos', '2024', 'enero'],
+  userId: 'user_123'
+});
+
+console.log(`ID de la carpeta final: ${folderId}`);
+```
+
+**Comportamiento:**
+- Recorre el `path` secuencialmente
+- Para cada segmento, busca la carpeta por `name + parentId + userId`
+- Si existe, la reutiliza
+- Si no existe, la crea
+- Devuelve el `folderId` del último segmento
+
+**Ejemplo práctico:**
+
+```typescript
+// Primera llamada: crea todas las carpetas
+const folderId1 = await client.folders.ensurePath({
+  path: ['app1', 'usuarios', 'user123'],
+  userId: 'user123'
+});
+// Resultado: crea app1/, luego app1/usuarios/, luego app1/usuarios/user123/
+
+// Segunda llamada con la misma ruta: reutiliza las carpetas existentes
+const folderId2 = await client.folders.ensurePath({
+  path: ['app1', 'usuarios', 'user123'],
+  userId: 'user123'
+});
+// Resultado: folderId1 === folderId2 (idempotente)
+```
+
+**Notas importantes:**
+- El backend debe tener un índice único `(userId, parentId, name)` para garantizar idempotencia
+- `POST /api/folders` debe ser idempotente en el backend
+- Si `parentId` es `null`, no se envía el parámetro en la query (el backend interpreta ausencia como raíz)
+- Las carpetas y archivos comparten la misma colección, diferenciados por el campo `type`
 
 ### Shares (Enlaces Públicos)
 
@@ -333,6 +404,9 @@ import type {
   ListFilesResponse,
   UploadParams,
   UploadResponse,
+  UploadFileParams,
+  FileResponse,
+  EnsurePathParams,
   CreateShareParams,
   CreateShareResponse,
   // ... más tipos
@@ -392,6 +466,53 @@ async function createShare(fileId: string) {
 }
 ```
 
+### Ejemplo: Subir archivo con estructura de carpetas
+
+**Antes (código manual):**
+```typescript
+async function uploadToPath(file: File, path: string[], userId: string) {
+  const token = await getAuthToken();
+  let parentId: string | null = null;
+  
+  // Crear carpetas manualmente
+  for (const segment of path) {
+    // Buscar carpeta existente
+    const searchResponse = await fetch(
+      `${BACKEND_URL}/api/folders?name=${segment}&parentId=${parentId || 'null'}&userId=${userId}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    const folders = await searchResponse.json();
+    const existing = folders.items?.find(f => f.name === segment);
+    
+    if (existing) {
+      parentId = existing.id;
+    } else {
+      // Crear carpeta
+      const createResponse = await fetch(`${BACKEND_URL}/api/folders`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: segment, parentId, userId })
+      });
+      const newFolder = await createResponse.json();
+      parentId = newFolder.id;
+    }
+  }
+  
+  // Subir archivo
+  // ... código de upload ...
+}
+```
+
+**Después (con SDK):**
+```typescript
+async function uploadToPath(file: File, path: string[], userId: string) {
+  return client.files.uploadFile({ file, path, userId });
+}
+```
+
 ## Modelo de Confianza
 
 Es importante entender el modelo de confianza y responsabilidades del SDK:
@@ -413,6 +534,8 @@ Es importante entender el modelo de confianza y responsabilidades del SDK:
 4. **Reintentos**: El SDK implementa reintentos automáticos para errores de red y servidor (configurable con `options.retries`).
 
 5. **Timeouts**: El SDK implementa timeouts automáticos (configurable con `options.timeout`, default: 30s).
+
+6. **Estructura de Carpetas**: Las carpetas y archivos comparten la misma colección, diferenciados por el campo `type`. Esto permite un árbol unificado, UI tipo Explorer y permisos por nodo. El backend debe tener un índice único `(userId, parentId, name)` para garantizar idempotencia en `ensurePath`.
 
 ## Compatibilidad
 
