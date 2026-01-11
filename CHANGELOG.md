@@ -5,6 +5,18 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.0.4] - 2025-01-XX
+
+### Añadido
+- Método `files.uploadFile()` completamente implementado y disponible en runtime
+- El método asegura automáticamente que la ruta de carpetas exista antes de subir el archivo
+- Función idempotente: si la ruta ya existe, la reutiliza
+- Tipos públicos exportados: `UploadFileParams`, `FileResponse`, `EnsurePathParams`
+
+### Corregido
+- Eliminado archivo `uploadFile.ts` duplicado que causaba confusión
+- El método ahora está correctamente implementado en `FilesModule` y disponible a través de `client.files.uploadFile()`
+
 ## [1.0.0] - 2025-01-XX
 
 ### Añadido
