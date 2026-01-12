@@ -38,12 +38,15 @@ export class ControlFileClient {
      *
      * @example
      * ```typescript
+     * // Con userId explícito (recomendado)
      * const appFiles = client.forApp('controldoc', 'user_123');
-     * const folderId = await appFiles.ensurePath({ path: ['documentos'] });
+     *
+     * // userId opcional (se requerirá en la primera operación)
+     * const appFiles2 = client.forApp('controldoc');
      * ```
      *
      * @param appId ID de la aplicación (ej: 'controldoc', 'controlaudit')
-     * @param userId ID del usuario autenticado
+     * @param userId ID del usuario autenticado (opcional, se puede proporcionar después)
      * @returns Módulo de archivos contractual para la aplicación
      *
      * @see CONTRACT-folders.md para más detalles sobre el contrato
@@ -52,9 +55,8 @@ export class ControlFileClient {
         if (!appId || typeof appId !== 'string' || appId.trim().length === 0) {
             throw new Error('appId es requerido y debe ser una cadena no vacía');
         }
-        if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
-            throw new Error('userId es requerido y debe ser una cadena no vacía');
-        }
-        return new AppFilesModule(this.http, appId, userId);
+        // userId es opcional, pero se validará cuando se use
+        const finalUserId = userId || '';
+        return new AppFilesModule(this.http, appId, finalUserId);
     }
 }

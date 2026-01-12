@@ -15,7 +15,8 @@
  */
 import { validatePageSize, validateFile } from '../../utils/validation';
 import { getOrCreateAppRoot } from './appRoot';
-import { ensurePathRelative } from './ensurePathRelative';
+import { ensurePathRelative, resolvePathRelative } from './ensurePathRelative';
+import { normalizePath } from './pathUtils';
 export class AppFilesModule {
     constructor(http, appId, userId) {
         this.http = http;
@@ -38,6 +39,10 @@ export class AppFilesModule {
      * Asegura que el app root esté inicializado
      */
     async ensureInitialized() {
+        // Validar userId si no se proporcionó
+        if (!this.userId || this.userId.trim().length === 0) {
+            throw new Error('userId es requerido. Proporciónelo al llamar client.forApp(appId, userId) o configure el userId antes de usar el módulo.');
+        }
         if (!this.appRootId) {
             await this.initialize();
         }
@@ -47,27 +52,49 @@ export class AppFilesModule {
         return this.appRootId;
     }
     /**
+     * Establece el userId si no se proporcionó en el constructor
+     *
+     * Útil cuando se crea el módulo sin userId y se quiere establecer después
+     */
+    setUserId(userId) {
+        if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+            throw new Error('userId es requerido y debe ser una cadena no vacía');
+        }
+        this.userId = userId;
+    }
+    /**
      * Lista archivos y carpetas en un path relativo al app root
      *
      * ⚠️ CONTRACTUAL: No expone parentId. Usa paths relativos al app root.
+     * ⚠️ No crea carpetas automáticamente. Si el path no existe, retorna lista vacía.
      *
      * @example
      * ```typescript
      * // Listar contenido del app root
      * const root = await appFiles.listFiles({});
      *
-     * // Listar contenido de una subcarpeta
-     * const docs = await appFiles.listFiles({ path: ['documentos'] });
+     * // Listar contenido de una subcarpeta (acepta string o array)
+     * const docs = await appFiles.listFiles({ path: 'documentos' });
+     * const docs2 = await appFiles.listFiles({ path: ['documentos', '2024'] });
      * ```
      */
     async listFiles(params = {}) {
         validatePageSize(params.pageSize);
         const appRootId = await this.ensureInitialized();
-        // Resolver el parentId desde el path relativo
+        // Resolver el parentId desde el path relativo (sin crear carpetas)
         let parentId = appRootId;
-        if (params.path && params.path.length > 0) {
-            // Asegurar que el path existe y obtener el folderId final
-            parentId = await ensurePathRelative(this.http, appRootId, params.path, this.userId);
+        const normalizedPath = normalizePath(params.path);
+        if (normalizedPath.length > 0) {
+            // Solo buscar, no crear (sin efectos secundarios)
+            const resolvedId = await resolvePathRelative(this.http, appRootId, normalizedPath, this.userId);
+            if (!resolvedId) {
+                // Path no existe, retornar lista vacía
+                return {
+                    items: [],
+                    nextPage: null,
+                };
+            }
+            parentId = resolvedId;
         }
         // Listar archivos usando el parentId resuelto
         const qs = new URLSearchParams();
@@ -95,18 +122,29 @@ export class AppFilesModule {
      *
      * @example
      * ```typescript
-     * // Crear ruta: appRoot/documentos/aprobados
-     * const folderId = await appFiles.ensurePath({
-     *   path: ['documentos', 'aprobados']
-     * });
+     * // Forma directa (caso común)
+     * const folderId = await appFiles.ensurePath('documentos/aprobados');
+     * const folderId2 = await appFiles.ensurePath(['documentos', 'aprobados']);
+     *
+     * // Forma con objeto (para futuras opciones)
+     * const folderId3 = await appFiles.ensurePath({ path: 'documentos/aprobados' });
      * ```
      */
-    async ensurePath(params) {
-        if (!params.path || params.path.length === 0) {
+    async ensurePath(pathOrParams) {
+        // Normalizar parámetros: aceptar tanto path directo como objeto
+        let path;
+        if (typeof pathOrParams === 'string' || Array.isArray(pathOrParams)) {
+            path = pathOrParams;
+        }
+        else {
+            path = pathOrParams.path;
+        }
+        const normalizedPath = normalizePath(path);
+        if (normalizedPath.length === 0) {
             throw new Error('El path no puede estar vacío');
         }
         const appRootId = await this.ensureInitialized();
-        return ensurePathRelative(this.http, appRootId, params.path, this.userId);
+        return ensurePathRelative(this.http, appRootId, normalizedPath, this.userId);
     }
     /**
      * Sube un archivo a un path relativo al app root
@@ -137,8 +175,9 @@ export class AppFilesModule {
         }
         // Resolver el parentId desde el path relativo (si se especifica)
         let parentId = appRootId;
-        if (params.path && params.path.length > 0) {
-            parentId = await ensurePathRelative(this.http, appRootId, params.path, this.userId);
+        const normalizedPath = normalizePath(params.path);
+        if (normalizedPath.length > 0) {
+            parentId = await ensurePathRelative(this.http, appRootId, normalizedPath, this.userId);
         }
         // Paso 1: Presign
         if (params.onProgress) {

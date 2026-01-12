@@ -57,6 +57,35 @@ export async function ensurePathRelative(http, appRootId, path, userId) {
     return currentParentId;
 }
 /**
+ * Resuelve un path relativo al app root sin crearlo
+ *
+ * ⚠️ CONTRACTUAL: Esta función solo busca, no crea carpetas.
+ * Retorna null si el path no existe.
+ *
+ * @param http Cliente HTTP
+ * @param appRootId ID de la carpeta app root (nunca null)
+ * @param path Path relativo al app root (ej: ['documentos', '2024'])
+ * @param userId ID del usuario
+ * @returns ID de la carpeta final del path, o null si no existe
+ */
+export async function resolvePathRelative(http, appRootId, path, userId) {
+    if (path.length === 0) {
+        return appRootId;
+    }
+    let currentParentId = appRootId;
+    for (const segmentName of path) {
+        if (!segmentName || segmentName.trim() === '') {
+            return null;
+        }
+        const existingFolder = await findFolderByName(http, segmentName, currentParentId, userId);
+        if (!existingFolder) {
+            return null; // Path no existe
+        }
+        currentParentId = existingFolder.id;
+    }
+    return currentParentId;
+}
+/**
  * Busca una carpeta por nombre, parentId y userId
  *
  * ⚠️ LEGACY: Usa GET /api/folders directamente.

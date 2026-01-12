@@ -25,15 +25,18 @@ export declare class ControlFileClient {
      *
      * @example
      * ```typescript
+     * // Con userId explícito (recomendado)
      * const appFiles = client.forApp('controldoc', 'user_123');
-     * const folderId = await appFiles.ensurePath({ path: ['documentos'] });
+     *
+     * // userId opcional (se requerirá en la primera operación)
+     * const appFiles2 = client.forApp('controldoc');
      * ```
      *
      * @param appId ID de la aplicación (ej: 'controldoc', 'controlaudit')
-     * @param userId ID del usuario autenticado
+     * @param userId ID del usuario autenticado (opcional, se puede proporcionar después)
      * @returns Módulo de archivos contractual para la aplicación
      *
      * @see CONTRACT-folders.md para más detalles sobre el contrato
      */
-    forApp(appId: string, userId: string): AppFilesModule;
+    forApp(appId: string, userId?: string): AppFilesModule;
 }

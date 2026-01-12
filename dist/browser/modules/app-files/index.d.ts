@@ -33,17 +33,25 @@ export declare class AppFilesModule {
      */
     private ensureInitialized;
     /**
+     * Establece el userId si no se proporcionó en el constructor
+     *
+     * Útil cuando se crea el módulo sin userId y se quiere establecer después
+     */
+    setUserId(userId: string): void;
+    /**
      * Lista archivos y carpetas en un path relativo al app root
      *
      * ⚠️ CONTRACTUAL: No expone parentId. Usa paths relativos al app root.
+     * ⚠️ No crea carpetas automáticamente. Si el path no existe, retorna lista vacía.
      *
      * @example
      * ```typescript
      * // Listar contenido del app root
      * const root = await appFiles.listFiles({});
      *
-     * // Listar contenido de una subcarpeta
-     * const docs = await appFiles.listFiles({ path: ['documentos'] });
+     * // Listar contenido de una subcarpeta (acepta string o array)
+     * const docs = await appFiles.listFiles({ path: 'documentos' });
+     * const docs2 = await appFiles.listFiles({ path: ['documentos', '2024'] });
      * ```
      */
     listFiles(params?: AppListFilesParams): Promise<ListFilesResponse>;
@@ -55,13 +63,15 @@ export declare class AppFilesModule {
      *
      * @example
      * ```typescript
-     * // Crear ruta: appRoot/documentos/aprobados
-     * const folderId = await appFiles.ensurePath({
-     *   path: ['documentos', 'aprobados']
-     * });
+     * // Forma directa (caso común)
+     * const folderId = await appFiles.ensurePath('documentos/aprobados');
+     * const folderId2 = await appFiles.ensurePath(['documentos', 'aprobados']);
+     *
+     * // Forma con objeto (para futuras opciones)
+     * const folderId3 = await appFiles.ensurePath({ path: 'documentos/aprobados' });
      * ```
      */
-    ensurePath(params: AppEnsurePathParams): Promise<string>;
+    ensurePath(pathOrParams: string | string[] | AppEnsurePathParams): Promise<string>;
     /**
      * Sube un archivo a un path relativo al app root
      *

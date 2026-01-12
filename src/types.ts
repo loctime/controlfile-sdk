@@ -232,10 +232,10 @@ export interface ShareInfoApiResponse {
  */
 export interface AppListFilesParams {
   /**
-   * Path relativo al app root (ej: ['documentos', '2024'])
+   * Path relativo al app root (ej: 'documentos/2024' o ['documentos', '2024'])
    * Si es vacío o undefined, lista el contenido del app root
    */
-  path?: string[];
+  path?: string | string[];
   pageSize?: number;
   cursor?: string;
 }
@@ -248,10 +248,10 @@ export interface AppListFilesParams {
  */
 export interface AppEnsurePathParams {
   /**
-   * Path relativo al app root (ej: ['documentos', 'aprobados'])
+   * Path relativo al app root (ej: 'documentos/aprobados' o ['documentos', 'aprobados'])
    * No puede estar vacío
    */
-  path: string[];
+  path: string | string[];
 }
 
 /**
@@ -263,9 +263,9 @@ export interface AppUploadFileParams {
   file: globalThis.File | Blob;
   /**
    * Path relativo al app root donde se subirá el archivo
-   * (ej: ['documentos', '2024'])
+   * (ej: 'documentos/2024' o ['documentos', '2024'])
    */
-  path?: string[];
+  path?: string | string[];
   onProgress?: (progress: number) => void;
 }
 
