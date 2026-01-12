@@ -2,20 +2,11 @@
 
 Este documento explica cómo migrar aplicaciones externas (ControlDoc, ControlAudit, etc.) de la API legacy a la nueva API contractual v1.
 
-## ¿Por qué migrar?
+**⚠️ IMPORTANTE:** Este documento asume que ya conoces y aceptas el [Contrato App ↔ ControlFile v1](./CONTRACT-folders.md). Si no lo has leído, hazlo primero.
 
-La API legacy permite operaciones que violan el contrato App ↔ ControlFile v1:
-- ❌ Crear carpetas raíz (`parentId = null`)
-- ❌ Exponer `parentId` en la API pública
-- ❌ Usar endpoints legacy directamente (`/api/folders/*`)
+Este documento se enfoca únicamente en los pasos prácticos de migración, ejemplos de código y mapeo de métodos. Para entender las reglas contractuales, autoridad y límites, consulta el contrato.
 
-La nueva API contractual:
-- ✅ Encapsula la jerarquía (no expone `parentId`)
-- ✅ Resuelve paths relativos al app root
-- ✅ No permite crear carpetas raíz
-- ✅ Cumple con el contrato App ↔ ControlFile v1
-
-## Cambios principales
+## Cambios Principales
 
 ### Antes (API Legacy)
 
@@ -24,16 +15,16 @@ import { ControlFileClient } from '@controlfile/sdk';
 
 const client = new ControlFileClient({ /* config */ });
 
-// ❌ Expone parentId
+// ❌ Expone parentId (viola contrato)
 const files = await client.files.list({ parentId: 'folder_123' });
 
-// ❌ Puede crear carpetas raíz
+// ❌ Puede crear carpetas raíz (viola contrato)
 const rootFolderId = await client.folders.ensurePath({
   path: ['app1'], // Esto crea una carpeta raíz
   userId: 'user_123'
 });
 
-// ❌ Expone parentId
+// ❌ Expone parentId (viola contrato)
 await client.files.upload({
   file: myFile,
   name: 'documento.pdf',
@@ -51,17 +42,17 @@ const client = new ControlFileClient({ /* config */ });
 // ✅ Obtener contexto de aplicación
 const appFiles = client.forApp('controldoc', 'user_123');
 
-// ✅ Listar usando paths relativos (no expone parentId)
+// ✅ Listar usando paths relativos (cumple contrato)
 const files = await appFiles.listFiles({ 
   path: ['documentos'] // Relativo al app root
 });
 
-// ✅ Asegurar path relativo (nunca crea carpetas raíz)
+// ✅ Asegurar path relativo (cumple contrato)
 const folderId = await appFiles.ensurePath({
   path: ['documentos', 'aprobados'] // Relativo al app root
 });
 
-// ✅ Subir archivo usando path relativo (no expone parentId)
+// ✅ Subir archivo usando path relativo (cumple contrato)
 await appFiles.uploadFile({
   file: myFile,
   path: ['documentos', '2024'] // Opcional, relativo al app root
@@ -273,24 +264,24 @@ await appFiles.uploadFile({
 - ✅ Las apps pueden migrar gradualmente
 - ⚠️ La API legacy está marcada como `@deprecated` y será removida en el futuro
 
-## Notas importantes
+## Notas Importantes
 
 ### App Root
 
-El app root se crea automáticamente la primera vez que usas `client.forApp()`. Actualmente se simula usando una carpeta con nombre especial `__app_${appId}` en la raíz global.
+El app root se crea automáticamente la primera vez que usas `client.forApp()`. 
 
-**⚠️ TRANSITIONAL:** Cuando el backend implemente `POST /api/apps/:appId/root`, el SDK migrará automáticamente a usar ese endpoint. Las apps no necesitan cambiar su código.
+**⚠️ TRANSITIONAL:** Actualmente se simula usando una carpeta con nombre especial `__app_${appId}` en la raíz global. Cuando el backend implemente `POST /api/apps/:appId/root` (según el contrato), el SDK migrará automáticamente. Las apps no necesitan cambiar su código.
 
-### Paths relativos
+### Paths Relativos
 
-Todos los paths en la API contractual son relativos al app root:
+Todos los paths en la API contractual son relativos al app root (según el contrato):
 - `[]` o `undefined` = app root
 - `['documentos']` = `appRoot/documentos`
 - `['documentos', '2024']` = `appRoot/documentos/2024`
 
-### No más parentId
+### No Más parentId
 
-La API contractual **no expone `parentId`** en ningún método público. La jerarquía está completamente encapsulada.
+La API contractual **no expone `parentId`** en ningún método público (requisito contractual). La jerarquía está completamente encapsulada.
 
 ## Preguntas frecuentes
 
@@ -312,5 +303,5 @@ Cada `appId` tiene su propio app root. Si cambias el `appId`, estarás trabajand
 
 ## Referencias
 
-- [Contrato App ↔ ControlFile v1](./CONTRACT-folders.md)
-- [Documentación del SDK](../../README.md)
+- **[Contrato App ↔ ControlFile v1](./CONTRACT-folders.md)** - Documento normativo canónico (LEER PRIMERO)
+- [Documentación del SDK](../../README.md) - Uso del SDK

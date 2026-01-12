@@ -1,8 +1,20 @@
 # Resumen de Implementación - API Contractual v1
 
+**⚠️ INTERNAL – NOT PART OF THE CONTRACT**
+
+Este documento es **SOLO para maintainers del SDK**. No es parte del contrato contractual y no debe ser usado por aplicaciones externas o IAs para entender las reglas contractuales.
+
+**Para el contrato normativo, consulta:** [CONTRACT-folders.md](./CONTRACT-folders.md)
+
+**Para guía de migración, consulta:** [MIGRATION-contractual-v1.md](./MIGRATION-contractual-v1.md)
+
+---
+
 ## Objetivo
 
 Agregar una nueva capa contractual al SDK que cumpla con el contrato App ↔ ControlFile v1, sin romper la compatibilidad con la API legacy existente.
+
+**Nota:** Este documento describe detalles técnicos de implementación. No hace afirmaciones normativas. Las reglas contractuales están definidas exclusivamente en `CONTRACT-folders.md`.
 
 ## Archivos Creados
 
@@ -71,7 +83,7 @@ Agregar una nueva capa contractual al SDK que cumpla con el contrato App ↔ Con
 
 ## Características de la Nueva API
 
-### ✅ Cumple con el Contrato v1
+**Nota técnica:** La implementación cumple con el contrato definido en `CONTRACT-folders.md`. Los detalles técnicos son:
 
 1. **No expone parentId:**
    - Todos los métodos usan paths relativos
@@ -103,6 +115,8 @@ Agregar una nueva capa contractual al SDK que cumpla con el contrato App ↔ Con
 
 ## Uso de la Nueva API
 
+**Nota:** Este es un ejemplo técnico. Para documentación completa de uso, consulta el README del SDK.
+
 ```typescript
 import { ControlFileClient } from '@controlfile/sdk';
 
@@ -126,12 +140,14 @@ await appFiles.uploadFile({
 });
 ```
 
-## Próximos Pasos
+## Próximos Pasos (Técnicos)
 
-1. **Backend:** Implementar `POST /api/apps/:appId/root`
+1. **Backend:** Implementar `POST /api/apps/:appId/root` (según contrato)
 2. **SDK:** Migrar `appRoot.ts` para usar el nuevo endpoint
-3. **Apps:** Migrar gradualmente a la nueva API
+3. **Apps:** Migrar gradualmente a la nueva API (ver guía de migración)
 4. **Futuro:** Deprecar y eventualmente remover la API legacy
+
+**Nota:** Estos pasos son técnicos. Las reglas contractuales están en `CONTRACT-folders.md`.
 
 ## Notas Técnicas
 

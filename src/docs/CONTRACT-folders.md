@@ -1,154 +1,211 @@
-📜 ControlFile – App Integration Contract (v1)
-1. Principio de autoridad
+# 📜 ControlFile – App Integration Contract (v1)
 
-ControlFile es la única autoridad sobre:
+**DOCUMENTO NORMATIVO CANÓNICO**
 
-estructura visible (navbar / taskbar)
+Este es el único documento contractual oficial que define las reglas, límites y autoridad entre ControlFile y las aplicaciones externas. Todas las implementaciones del SDK y las aplicaciones deben cumplir con este contrato.
 
-reglas de UX
+---
 
-jerarquía permitida
+## 1. Principio de Autoridad
 
-Las aplicaciones externas son clientes, no co-dueñas del filesystem.
+**ControlFile es la única autoridad sobre:**
 
-2. Conceptos fundamentales
-2.1 Jerarquía de carpetas
+- Estructura visible (navbar / taskbar)
+- Reglas de UX
+- Jerarquía permitida
 
-Se define exclusivamente por parentId
+**Las aplicaciones externas son clientes, no co-dueñas del filesystem.**
 
-parentId = null → carpeta raíz
+---
 
-parentId = <id> → subcarpeta
+## 2. Conceptos Fundamentales
 
-⚠️ Jerarquía ≠ UX
+### 2.1 Jerarquía de Carpetas
 
-2.2 Navbar
+La jerarquía se define exclusivamente por `parentId`:
 
-Representa carpetas creadas manualmente por el usuario
+- `parentId = null` → carpeta raíz (solo ControlFile UI puede crear)
+- `parentId = <id>` → subcarpeta
 
-Es exploratorio
+**⚠️ IMPORTANTE: Jerarquía ≠ UX**
 
-Es exclusivo de ControlFile UI
+La jerarquía técnica (`parentId`) no determina la visibilidad en navbar o taskbar. Esos aspectos son controlados exclusivamente por ControlFile.
 
-👉 Las apps NO pueden crear carpetas en el navbar
+### 2.2 Navbar
 
-2.3 Taskbar
+**Definición:**
+- Representa carpetas creadas manualmente por el usuario
+- Es exploratorio
+- Es exclusivo de ControlFile UI
 
-Representa accesos rápidos de aplicaciones
+**Regla contractual:**
+- ❌ **Las apps NO pueden crear carpetas en el navbar**
 
-No depende de parentId
+### 2.3 Taskbar
 
-No depende de metadata.source
+**Definición:**
+- Representa accesos rápidos de aplicaciones
+- No depende de `parentId`
+- No depende de `metadata.source`
+- Se define únicamente por `userSettings.taskbarItems`
 
-Se define únicamente por:
+**Regla contractual:**
+- Solo ControlFile puede modificar el taskbar mediante la Taskbar API
 
-userSettings.taskbarItems
+---
 
-3. Reglas duras (obligatorias)
-3.1 Creación de carpetas
-❌ Prohibido para apps
+## 3. Reglas Duras (Obligatorias)
 
-Crear carpetas con parentId = null
+### 3.1 Creación de Carpetas por Apps
 
-Crear carpetas visibles en navbar
+**❌ PROHIBIDO para apps:**
 
-Auto-pinnear carpetas
+1. Crear carpetas con `parentId = null` (carpetas raíz)
+2. Crear carpetas visibles en navbar
+3. Auto-pinnear carpetas al taskbar
+4. Exponer `parentId` en APIs públicas
+5. Usar endpoints legacy directamente (`/api/folders/*`) para crear carpetas raíz
 
-✅ Permitido para apps
+**✅ PERMITIDO para apps:**
 
-Solicitar su carpeta raíz de aplicación mediante API dedicada
+1. Solicitar su carpeta raíz de aplicación mediante API dedicada (`POST /api/apps/:appId/root`)
+2. Crear subcarpetas dentro de su app root usando paths relativos
+3. Usar el SDK contractual que encapsula la jerarquía
 
-Crear subcarpetas dentro de su root
+### 3.2 ControlFile UI
 
-3.2 ControlFile UI
+**Permisos exclusivos:**
 
-Puede crear carpetas raíz (parentId = null)
+- Puede crear carpetas raíz (`parentId = null`)
+- Esas carpetas aparecen en navbar
+- No se auto-agregan al taskbar (requiere acción explícita del usuario)
 
-Esas carpetas aparecen en navbar
+---
 
-No se auto-agregan al taskbar
+## 4. APIs Contractuales (Oficiales)
 
-4. APIs contractuales (oficiales)
-4.1 App Root (obligatorio para apps)
-POST /api/apps/:appId/root
+### 4.1 App Root API (Obligatorio para Apps)
 
+**Endpoint:** `POST /api/apps/:appId/root`
 
-Responsabilidad de ControlFile:
+**Responsabilidad de ControlFile:**
 
-crear (o reutilizar) carpeta raíz de la app
+1. Crear (o reutilizar) carpeta raíz de la app
+2. **NO** exponerla en navbar
+3. **SÍ** agregarla al taskbar automáticamente
+4. Operación idempotente (múltiples llamadas devuelven el mismo resultado)
 
-NO exponerla en navbar
+**Responsabilidad de Apps:**
 
-SÍ agregarla al taskbar
+- Las apps **NO** eligen `parentId`
+- Las apps **NO** controlan la UX
+- Las apps deben usar este endpoint para obtener su app root antes de cualquier operación
 
-operación idempotente
+### 4.2 Taskbar API (Explícita)
 
-Las apps no eligen parentId ni UX.
+**Endpoints:**
+- `GET /api/taskbar` - Listar items del taskbar
+- `POST /api/taskbar/pin` - Agregar item al taskbar
+- `POST /api/taskbar/unpin` - Remover item del taskbar
 
-4.2 Taskbar API (explícita)
-GET  /api/taskbar
-POST /api/taskbar/pin
-POST /api/taskbar/unpin
+**Reglas:**
 
+- Operan solo sobre `userSettings.taskbarItems`
+- No crean carpetas
+- No modifican jerarquía
+- ControlFile puede usar esta API para gestionar el taskbar
 
-Operan solo sobre userSettings.taskbarItems
+---
 
-No crean carpetas
+## 5. SDK Contractual (Interfaz Mínima)
 
-No modifican jerarquía
+Las apps **NO** crean carpetas directamente. Usan el SDK contractual:
 
-5. SDK – ensurePath (contrato mínimo)
+```typescript
+const appFiles = client.forApp('controldoc', 'user_123');
+await appFiles.ensurePath({ path: ['documentos', 'aprobados'] });
+```
 
-Las apps no crean carpetas directamente.
+**ControlFile garantiza:**
 
-Usan:
+1. Existencia de la carpeta
+2. Ubicación correcta (relativa al app root)
+3. Coherencia UX (no aparece en navbar)
+4. Encapsulación completa (no expone `parentId`)
 
-ensurePath({
-  appId: 'controldoc',
-  path: 'documentos/aprobados'
-})
+**Reglas del SDK:**
 
+- Todos los paths son relativos al app root
+- `path: []` o `path: undefined` = app root
+- `path: ['documentos']` = `appRoot/documentos`
+- El SDK **NUNCA** crea carpetas con `parentId = null`
 
-ControlFile garantiza:
+---
 
-existencia
+## 6. metadata.source (Estado v1)
 
-ubicación correcta
+**Estado actual:**
 
-coherencia UX
+- `metadata.source` **NO** tiene valor contractual
+- **NO** define UX
+- **NO** define jerarquía
+- **NO** debe ser usado por apps
 
-6. metadata.source (estado v1)
+**Futuro:**
 
-No tiene valor contractual
+- Se elimina o se redefine en v2
+- Las apps no deben depender de este campo
 
-No define UX
+---
 
-No define jerarquía
+## 7. Compatibilidad y Transición
 
-👉 No debe ser usado por apps
+### Estado Actual
 
-(Se elimina o se redefine en v2)
+Hasta que este contrato se implemente completamente:
 
-7. Compatibilidad hacia atrás
+- El backend puede seguir siendo permisivo técnicamente
+- **PERO** la documentación deja claro que:
+  - Crear carpetas raíz desde apps es **comportamiento no soportado**
+  - Cualquier app que lo haga está **fuera de contrato**
 
-Hasta que este contrato se implemente:
+### Migración
 
-el backend sigue siendo permisivo
+- Las apps deben migrar gradualmente a la API contractual
+- La API legacy está marcada como `@deprecated`
+- Ver [MIGRATION-contractual-v1.md](./MIGRATION-contractual-v1.md) para guía de migración
 
-pero la documentación deja claro que:
+---
 
-crear carpetas raíz desde apps es comportamiento no soportado
+## 8. Beneficios del Contrato
 
-cualquier app que lo haga está fuera de contrato
+1. **Navbar limpio** - Solo carpetas creadas por usuarios
+2. **Taskbar predecible** - Solo apps registradas
+3. **SDK simple** - Paths relativos, sin `parentId`
+4. **UX consistente** - ControlFile controla la experiencia
+5. **Plataforma gobernada** - No anárquica, con reglas claras
 
-8. Beneficios del contrato
+---
 
-Navbar limpio
+## 9. Violaciones del Contrato
 
-Taskbar predecible
+**Una app está fuera de contrato si:**
 
-SDK simple
+1. Crea carpetas con `parentId = null` directamente
+2. Expone `parentId` en su API pública
+3. Usa endpoints legacy (`/api/folders/*`) para crear carpetas raíz
+4. Intenta modificar el navbar o taskbar directamente
+5. Depende de `metadata.source` para lógica de negocio
 
-UX consistente
+**Consecuencias:**
 
-Plataforma gobernada (no anárquica)
+- Comportamiento no garantizado
+- Puede romper con futuras versiones del SDK
+- No recibe soporte oficial
+
+---
+
+## Referencias
+
+- [Guía de Migración](./MIGRATION-contractual-v1.md) - Pasos prácticos para migrar a la API contractual
+- [Documentación del SDK](../../README.md) - Uso del SDK
