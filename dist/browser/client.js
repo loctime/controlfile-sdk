@@ -6,6 +6,7 @@ import { FilesModule } from './modules/files';
 import { SharesModule } from './modules/shares';
 import { AccountsModule } from './modules/accounts';
 import { FoldersModule } from './modules/folders';
+import { AppFilesModule } from './modules/app-files';
 export class ControlFileClient {
     constructor(config) {
         // Configurar opciones por defecto
@@ -25,5 +26,35 @@ export class ControlFileClient {
         this.shares = new SharesModule(this.http, config.baseUrl);
         this.accounts = new AccountsModule(this.http);
         this.folders = new FoldersModule(this.http);
+    }
+    /**
+     * Crea un contexto de aplicación para operaciones contractuales
+     *
+     * ⚠️ CONTRACTUAL v1: Este método devuelve un módulo que implementa
+     * el contrato App ↔ ControlFile v1.
+     *
+     * Las apps deben usar este método en lugar de los módulos legacy
+     * (files, folders) para operaciones de archivos y carpetas.
+     *
+     * @example
+     * ```typescript
+     * const appFiles = client.forApp('controldoc', 'user_123');
+     * const folderId = await appFiles.ensurePath({ path: ['documentos'] });
+     * ```
+     *
+     * @param appId ID de la aplicación (ej: 'controldoc', 'controlaudit')
+     * @param userId ID del usuario autenticado
+     * @returns Módulo de archivos contractual para la aplicación
+     *
+     * @see CONTRACT-folders.md para más detalles sobre el contrato
+     */
+    forApp(appId, userId) {
+        if (!appId || typeof appId !== 'string' || appId.trim().length === 0) {
+            throw new Error('appId es requerido y debe ser una cadena no vacía');
+        }
+        if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+            throw new Error('userId es requerido y debe ser una cadena no vacía');
+        }
+        return new AppFilesModule(this.http, appId, userId);
     }
 }

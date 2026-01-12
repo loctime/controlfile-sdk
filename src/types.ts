@@ -213,3 +213,75 @@ export interface ShareInfoApiResponse {
   expiresAt: Date | string | null;
   downloadCount: number;
 }
+
+/**
+ * ============================================================================
+ * API CONTRACTUAL v1 - Tipos para aplicaciones externas
+ * ============================================================================
+ * 
+ * Estos tipos implementan el contrato App ↔ ControlFile v1.
+ * Las apps deben usar estos tipos en lugar de los tipos legacy que exponen parentId.
+ * 
+ * @see CONTRACT-folders.md para más detalles sobre el contrato
+ */
+
+/**
+ * Parámetros para listar archivos usando paths relativos al app root
+ * 
+ * ⚠️ CONTRACTUAL: No expone parentId. Usa paths relativos al app root.
+ */
+export interface AppListFilesParams {
+  /**
+   * Path relativo al app root (ej: ['documentos', '2024'])
+   * Si es vacío o undefined, lista el contenido del app root
+   */
+  path?: string[];
+  pageSize?: number;
+  cursor?: string;
+}
+
+/**
+ * Parámetros para asegurar un path relativo al app root
+ * 
+ * ⚠️ CONTRACTUAL: No permite crear carpetas raíz (parentId = null).
+ * Todos los paths son relativos al app root.
+ */
+export interface AppEnsurePathParams {
+  /**
+   * Path relativo al app root (ej: ['documentos', 'aprobados'])
+   * No puede estar vacío
+   */
+  path: string[];
+}
+
+/**
+ * Parámetros para subir un archivo usando path relativo al app root
+ * 
+ * ⚠️ CONTRACTUAL: No expone parentId. Usa paths relativos al app root.
+ */
+export interface AppUploadFileParams {
+  file: globalThis.File | Blob;
+  /**
+   * Path relativo al app root donde se subirá el archivo
+   * (ej: ['documentos', '2024'])
+   */
+  path?: string[];
+  onProgress?: (progress: number) => void;
+}
+
+/**
+ * Contexto de aplicación para operaciones contractuales
+ * 
+ * Este contexto encapsula el appId y userId, permitiendo operaciones
+ * que son relativas al app root sin exponer parentId.
+ */
+export interface AppFilesContext {
+  /**
+   * ID de la aplicación (ej: 'controldoc', 'controlaudit')
+   */
+  appId: string;
+  /**
+   * ID del usuario autenticado
+   */
+  userId: string;
+}

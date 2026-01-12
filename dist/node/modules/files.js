@@ -1,5 +1,18 @@
 /**
  * Módulo de archivos
+ *
+ * ⚠️ LEGACY: Este módulo expone APIs legacy que violan el contrato App ↔ ControlFile v1.
+ *
+ * Las aplicaciones externas NO deben usar este módulo directamente para operaciones
+ * que involucren carpetas o parentId.
+ *
+ * Para operaciones contractuales, usar `client.forApp(appId, userId)` que devuelve
+ * un módulo que cumple con el contrato v1.
+ *
+ * Este módulo se mantiene por compatibilidad hacia atrás y será deprecado parcialmente
+ * en el futuro (solo los métodos que exponen parentId).
+ *
+ * @see CONTRACT-folders.md para más detalles sobre el contrato
  */
 import { validateFileId, validateFileName, validatePageSize, validateFile, } from '../utils/validation';
 import { ensurePath } from './folders/ensurePath';
@@ -9,6 +22,13 @@ export class FilesModule {
     }
     /**
      * Lista archivos y carpetas
+     *
+     * ⚠️ LEGACY: Este método expone parentId, lo cual viola el contrato App ↔ ControlFile v1.
+     *
+     * Las apps deben usar `client.forApp(appId, userId).listFiles({ path })` en su lugar,
+     * que usa paths relativos al app root y no expone parentId.
+     *
+     * @deprecated Para apps, usar `client.forApp(appId, userId).listFiles()` en su lugar
      */
     async list(params = {}) {
         validatePageSize(params.pageSize);
@@ -50,6 +70,13 @@ export class FilesModule {
     }
     /**
      * Sube un archivo (flujo completo: presign → upload → confirm)
+     *
+     * ⚠️ LEGACY: Este método expone parentId, lo cual viola el contrato App ↔ ControlFile v1.
+     *
+     * Las apps deben usar `client.forApp(appId, userId).uploadFile({ file, path })` en su lugar,
+     * que usa paths relativos al app root y no expone parentId.
+     *
+     * @deprecated Para apps, usar `client.forApp(appId, userId).uploadFile()` en su lugar
      */
     async upload(params) {
         validateFile(params.file);
@@ -184,6 +211,14 @@ export class FilesModule {
     }
     /**
      * Sube un archivo asegurando primero que la ruta de carpetas exista
+     *
+     * ⚠️ LEGACY: Este método usa ensurePath legacy que puede crear carpetas raíz,
+     * lo cual viola el contrato App ↔ ControlFile v1.
+     *
+     * Las apps deben usar `client.forApp(appId, userId).uploadFile({ file, path })` en su lugar,
+     * que resuelve paths relativos al app root y cumple con el contrato v1.
+     *
+     * @deprecated Para apps, usar `client.forApp(appId, userId).uploadFile()` en su lugar
      */
     async uploadFile(params) {
         const { file, path, userId, onProgress } = params;

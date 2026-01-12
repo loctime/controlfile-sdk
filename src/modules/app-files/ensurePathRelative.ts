@@ -1,22 +1,17 @@
 /**
- * Asegura que una ruta de carpetas exista, creándola si es necesario
- * Función idempotente: si la ruta ya existe, la reutiliza
+ * Asegura que un path relativo al app root exista
  * 
- * ⚠️ LEGACY: Esta función permite crear carpetas raíz (parentId = null),
- * lo cual viola el contrato App ↔ ControlFile v1.
+ * ⚠️ CONTRACTUAL: Esta función NO permite crear carpetas raíz (parentId = null).
+ * Todos los paths son relativos al appRootId proporcionado.
  * 
- * Las apps deben usar `ensurePathRelative()` en su lugar, que resuelve
- * paths relativos al app root y no permite crear carpetas raíz.
- * 
- * @deprecated Esta función es legacy y será reemplazada por la API contractual
+ * @see CONTRACT-folders.md para más detalles sobre el contrato
  */
 
 import { HttpClient } from '../../utils/http';
-import type { EnsurePathParams, Folder } from '../../types';
+import type { Folder } from '../../types';
 
 /**
  * Normaliza una respuesta de carpeta del backend para usar siempre 'id'
- * Acepta tanto { id } como { folderId } para mantener compatibilidad
  */
 function normalizeFolderResponse(response: any): Folder {
   const folderId = response.id ?? response.folderId;
@@ -32,23 +27,31 @@ function normalizeFolderResponse(response: any): Folder {
 }
 
 /**
- * Normaliza un array de carpetas del backend
+ * Asegura que un path relativo al app root exista, creándolo si es necesario
+ * 
+ * ⚠️ CONTRACTUAL: Esta función garantiza que:
+ * - NUNCA crea carpetas con parentId = null
+ * - Todos los paths son relativos al appRootId
+ * - Es idempotente: si el path ya existe, lo reutiliza
+ * 
+ * @param http Cliente HTTP
+ * @param appRootId ID de la carpeta app root (nunca null)
+ * @param path Path relativo al app root (ej: ['documentos', '2024'])
+ * @param userId ID del usuario
+ * @returns ID de la carpeta final del path
  */
-function normalizeFolderArray(items: any[]): Folder[] {
-  return items.map(normalizeFolderResponse);
-}
-
-export async function ensurePath(
+export async function ensurePathRelative(
   http: HttpClient,
-  params: EnsurePathParams
+  appRootId: string,
+  path: string[],
+  userId: string
 ): Promise<string> {
-  const { path, userId } = params;
-
   if (path.length === 0) {
     throw new Error('El path no puede estar vacío');
   }
 
-  let currentParentId: string | null = null;
+  // Empezar desde el app root (nunca null)
+  let currentParentId: string = appRootId;
 
   for (const segmentName of path) {
     if (!segmentName || segmentName.trim() === '') {
@@ -58,20 +61,21 @@ export async function ensurePath(
     const existingFolder = await findFolderByName(
       http,
       segmentName,
-      currentParentId,
+      currentParentId, // ⚠️ CONTRACTUAL: Nunca null
       userId
     );
 
     if (existingFolder) {
       currentParentId = existingFolder.id;
     } else {
-      const newFolder = await createFolder(http, segmentName, currentParentId, userId);
+      const newFolder = await createFolder(
+        http,
+        segmentName,
+        currentParentId, // ⚠️ CONTRACTUAL: Nunca null
+        userId
+      );
       currentParentId = newFolder.id;
     }
-  }
-
-  if (!currentParentId) {
-    throw new Error('Error al crear la ruta de carpetas');
   }
 
   return currentParentId;
@@ -80,21 +84,19 @@ export async function ensurePath(
 /**
  * Busca una carpeta por nombre, parentId y userId
  * 
- * Nota: Si parentId es null, no se envía el parámetro en la query.
- * El backend interpreta la ausencia como carpeta raíz.
+ * ⚠️ LEGACY: Usa GET /api/folders directamente.
+ * En el futuro, esto debe usar la API contractual.
  */
 async function findFolderByName(
   http: HttpClient,
   name: string,
-  parentId: string | null,
+  parentId: string, // ⚠️ CONTRACTUAL: Nunca null en este contexto
   userId: string
 ): Promise<Folder | null> {
   const qs = new URLSearchParams();
   qs.set('name', name);
   qs.set('userId', userId);
-  if (parentId !== null) {
-    qs.set('parentId', parentId);
-  }
+  qs.set('parentId', parentId); // Siempre presente (nunca null)
 
   const response = await http.call<{
     items?: any[];
@@ -102,7 +104,7 @@ async function findFolderByName(
   }>(`/api/folders?${qs.toString()}`);
 
   const rawItems = response.items || response.data || [];
-  const items = normalizeFolderArray(rawItems);
+  const items = rawItems.map(normalizeFolderResponse);
   
   const folder = items.find(
     (item) =>
@@ -118,21 +120,22 @@ async function findFolderByName(
 /**
  * Crea una nueva carpeta
  * 
- * Nota: POST /api/folders debe ser idempotente en el backend.
- * El backend debe tener un índice único (userId, parentId, name) para garantizar
- * que múltiples llamadas con los mismos parámetros no creen duplicados.
+ * ⚠️ LEGACY: Usa POST /api/folders directamente.
+ * En el futuro, esto debe usar la API contractual.
+ * 
+ * ⚠️ CONTRACTUAL: Esta función garantiza que parentId nunca es null.
  */
 async function createFolder(
   http: HttpClient,
   name: string,
-  parentId: string | null,
+  parentId: string, // ⚠️ CONTRACTUAL: Nunca null
   userId: string
 ): Promise<Folder> {
   const response = await http.call<any>('/api/folders', {
     method: 'POST',
     body: JSON.stringify({
       name,
-      parentId,
+      parentId, // ⚠️ CONTRACTUAL: Siempre presente (nunca null)
       userId,
     }),
   });
