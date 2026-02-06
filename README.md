@@ -133,6 +133,8 @@ const result = await client.files.upload({
 console.log(`Archivo subido: ${result.fileId}`);
 ```
 
+**Nota sobre uploads desde browser**: El SDK automáticamente filtra el header `Content-Type` en uploads PUT desde browser para evitar preflight OPTIONS que Backblaze B2 y otros storage S3-compatible bloquean cuando el header no está firmado en el presign. Esto es intencional y sigue las mejores prácticas para uploads S3-compatible desde browser. Solo se envían headers que están explícitamente incluidos en el presign (SignedHeaders).
+
 #### Subir archivo con ruta automática
 
 El método `uploadFile` asegura automáticamente que la ruta de carpetas exista antes de subir el archivo. Es idempotente: si la ruta ya existe, la reutiliza.

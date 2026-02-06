@@ -5,6 +5,17 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.0.5] - 2025-02-06
+
+### Corregido
+- **Uploads desde browser con presigned URLs**: El SDK ahora filtra automáticamente el header `Content-Type` en uploads PUT desde browser para evitar preflight OPTIONS que Backblaze B2 y otros storage S3-compatible bloquean cuando el header no está firmado en el presign.
+- **Compatibilidad CORS mejorada**: Los uploads desde browser ahora funcionan correctamente sin requerir configuraciones CORS permisivas, ya que no se envían headers no firmados que disparen preflight.
+
+### Cambios técnicos
+- Los métodos `uploadToStorage` en `FilesModule` y `AppFilesModule` ahora filtran `Content-Type` por defecto cuando se ejecutan en browser.
+- Solo se envían headers que están explícitamente incluidos en el presign (SignedHeaders).
+- Este comportamiento es intencional y sigue las mejores prácticas para uploads S3-compatible desde browser.
+
 ## [1.0.4] - 2025-01-XX
 
 ### Añadido

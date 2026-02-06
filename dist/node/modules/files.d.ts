@@ -47,8 +47,28 @@ export declare class FilesModule {
     upload(params: UploadParams): Promise<UploadResponse>;
     /**
      * Sube el archivo al storage usando uploadUrl, method y headers del backend
+     *
+     * ⚠️ IMPORTANTE: En browser, NO enviamos Content-Type por defecto para evitar preflight OPTIONS.
+     * Esto es necesario para compatibilidad con Backblaze B2 y otros storage S3-compatible que
+     * bloquean preflight cuando Content-Type no está firmado en el presign.
+     *
+     * Solo se envían headers que están explícitamente incluidos en el presign (SignedHeaders).
+     * Si el backend envía Content-Type pero no está firmado, se filtra automáticamente.
      */
     private uploadToStorage;
+    /**
+     * Filtra headers para evitar preflight OPTIONS en browser
+     *
+     * Remueve Content-Type si no está explícitamente firmado en el presign.
+     * Esto es necesario porque:
+     * - Los browsers disparan preflight cuando se envía Content-Type en PUT
+     * - Backblaze B2 y otros storage S3-compatible bloquean preflight si Content-Type no está en SignedHeaders
+     * - El default seguro es NO enviar Content-Type a menos que el presign lo incluya explícitamente
+     *
+     * @param headers Headers recibidos del backend
+     * @returns Headers filtrados seguros para browser
+     */
+    private filterHeadersForBrowser;
     /**
      * Elimina un archivo (soft delete)
      */

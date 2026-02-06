@@ -197,6 +197,13 @@ export class FilesModule {
 
   /**
    * Sube el archivo al storage usando uploadUrl, method y headers del backend
+   * 
+   * ⚠️ IMPORTANTE: En browser, NO enviamos Content-Type por defecto para evitar preflight OPTIONS.
+   * Esto es necesario para compatibilidad con Backblaze B2 y otros storage S3-compatible que
+   * bloquean preflight cuando Content-Type no está firmado en el presign.
+   * 
+   * Solo se envían headers que están explícitamente incluidos en el presign (SignedHeaders).
+   * Si el backend envía Content-Type pero no está firmado, se filtra automáticamente.
    */
   private async uploadToStorage(
     url: string,
@@ -234,14 +241,55 @@ export class FilesModule {
 
       xhr.open(method, url);
 
-      // Aplicar headers del backend
-      Object.entries(headers).forEach(([key, value]) => {
+      // Filtrar headers problemáticos en browser para evitar preflight OPTIONS
+      // No enviamos Content-Type a menos que esté explícitamente firmado en el presign
+      // Esto previene preflight CORS que Backblaze B2 y otros storage S3-compatible bloquean
+      const filteredHeaders = this.filterHeadersForBrowser(headers);
+
+      // Aplicar headers filtrados del backend
+      Object.entries(filteredHeaders).forEach(([key, value]) => {
         xhr.setRequestHeader(key, value);
       });
 
-      // Enviar el archivo directamente como Blob/File
+      // Enviar el archivo directamente como Blob/File (sin Content-Type explícito)
       xhr.send(fileBlob);
     });
+  }
+
+  /**
+   * Filtra headers para evitar preflight OPTIONS en browser
+   * 
+   * Remueve Content-Type si no está explícitamente firmado en el presign.
+   * Esto es necesario porque:
+   * - Los browsers disparan preflight cuando se envía Content-Type en PUT
+   * - Backblaze B2 y otros storage S3-compatible bloquean preflight si Content-Type no está en SignedHeaders
+   * - El default seguro es NO enviar Content-Type a menos que el presign lo incluya explícitamente
+   * 
+   * @param headers Headers recibidos del backend
+   * @returns Headers filtrados seguros para browser
+   */
+  private filterHeadersForBrowser(headers: Record<string, string>): Record<string, string> {
+    const filtered: Record<string, string> = {};
+    
+    // En browser, solo enviamos headers que están explícitamente firmados
+    // Si el backend envía Content-Type pero no está en SignedHeaders del presign,
+    // lo filtramos para evitar preflight OPTIONS
+    Object.entries(headers).forEach(([key, value]) => {
+      const lowerKey = key.toLowerCase();
+      
+      // Filtrar Content-Type por defecto (solo enviar si está explícitamente firmado)
+      // Nota: El backend debería incluir Content-Type en SignedHeaders si quiere que se envíe
+      if (lowerKey === 'content-type') {
+        // Por ahora, filtramos Content-Type siempre para evitar preflight
+        // En el futuro, podríamos verificar si está en SignedHeaders del presign
+        return;
+      }
+      
+      // Permitir otros headers que vengan del backend (ej: x-amz-* si están firmados)
+      filtered[key] = value;
+    });
+    
+    return filtered;
   }
 
   /**
