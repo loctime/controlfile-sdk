@@ -1,0 +1,11 @@
+const path = require('path');
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+const name = pkg.name;
+const version = pkg.version;
+console.log('\n========================================');
+console.log('Publicado. Para instalar en otros proyectos:');
+console.log('');
+console.log(`  npm install ${name}@${version}`);
+console.log('');
+console.log('========================================\n');

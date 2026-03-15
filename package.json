@@ -42,7 +42,7 @@
     "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\" || true",
     "test": "npm run build && node ./test/smoke.test.mjs",
     "prepublishOnly": "npm run build",
-    "sdk-go": "npm run build && git add -A && (git commit -m \"chore: build before release\" || git diff --quiet) && npm version patch --force && git push --follow-tags"
+    "sdk-go": "npm run build && git add -A && (git commit -m \"chore: build before release\" || git diff --quiet) && npm version patch --force && git push --follow-tags && npm publish --access public && node scripts/print-install-log.cjs"
   },
   "repository": {
     "type": "git",
